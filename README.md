@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Veyor demo
 
-## Getting Started
+A minimal deal tracker for a real estate brokerage.
 
-First, run the development server:
+## What it does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Sign up and log in, with sessions handled by Supabase auth
+- Create a deal with property address, client name, and closing date
+- Each user sees only their own deals
+- Unauthenticated users cannot reach the dashboard
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Next.js 16 (App Router), React, TypeScript, Tailwind, Supabase (Postgres + auth).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Data isolation
 
-## Learn More
+Access is enforced by row-level security in Postgres, not by filtering in application code.
 
-To learn more about Next.js, take a look at the following resources:
+The `deals` table has RLS enabled with a policy matching `auth.uid()` against the row's `user_id`. 
+`using` controls which rows are visible on reads, and `with check` validates rows on write so a user cannot insert a deal owned by someone else.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The practical effect is that the dashboard query selects from `deals` with no user filter at all - Postgres returns only the rows that belong to the caller.
+A missing `where` clause in application code cannot leak another user's data.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Next steps
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Deal types, each carrying its own list of required forms
+- Required forms attached automatically when a deal is created, and markable as received
+- A completion count per deal, and a flag when a deal is within 14 days of closing with forms outstanding
+- Editing and closing deals - right now they can only be created
+- Document upload, e-signature, trust accounting
